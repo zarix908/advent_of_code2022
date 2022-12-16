@@ -1,0 +1,5 @@
+total:                         183328
+--- End jemalloc statistics ---
+total:                         799616
+--- End jemalloc statistics ---
+total:                         769216

@@ -6,8 +6,6 @@ use std::{
     cell::RefCell
 };
 
-// use crate::mem::mem_print;
-
 use regex::Regex;
 
 struct Directory {
@@ -72,14 +70,10 @@ impl Node {
 }
 
 pub fn solve(reader: BufReader<File>) {
-    // mem_print();
     let root = build_tree(reader);
-    // mem_print();
     let mut total = 0;
     root.borrow_mut().size(&mut total);
     println!("{}", total);
-    // drop(root);
-    // mem_print();
 }
 
 fn build_tree(reader: BufReader<File>) -> Rc<RefCell<Node>> {
