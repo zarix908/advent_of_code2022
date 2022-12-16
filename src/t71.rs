@@ -2,16 +2,18 @@ use std::{
     fs::File,
     io::{BufReader, BufRead},
     collections::HashMap,
-    rc::Rc,
+    rc::{Rc, Weak},
     cell::RefCell
 };
+
+// use crate::mem::mem_print;
 
 use regex::Regex;
 
 struct Directory {
     size: Option<u32>,
     children: HashMap<String, Rc<RefCell<Node>>>,
-    parent: Option<Rc<RefCell<Node>>>
+    parent: Option<Weak<RefCell<Node>>>
 }
 
 enum Node {
@@ -34,16 +36,50 @@ impl Node {
         }
     }
 
-    fn parent(&self) -> Option<Rc<RefCell<Node>>> {
+    fn parent(&self) -> Option<Weak<RefCell<Node>>> {
         match self {
-            Node::Dir(d) => d.parent.as_ref().map(|parent| Rc::clone(parent)),
+            Node::Dir(d) => d.parent.as_ref()
+                .map(|p| Weak::clone(p)),
             _ => panic!("this node isn't dir")
         }
+    }
+
+    fn size(&mut self, total: &mut u32) -> u32 {
+        if let Node::File(s) = self {
+            return *s;
+        }
+
+        if let Node::Dir(dir) = self {
+            if let Some(s) = dir.size {
+                return s;
+            }
+
+            let mut size = 0;
+            for child in dir.children.values() {
+                size += child.borrow_mut().size(total);
+            }
+            dir.size = Some(size);
+
+            if size < 100000 {
+                *total += size;
+            }
+
+            return size;
+        }
+
+        unreachable!();
     }
 }
 
 pub fn solve(reader: BufReader<File>) {
+    // mem_print();
     let root = build_tree(reader);
+    // mem_print();
+    let mut total = 0;
+    root.borrow_mut().size(&mut total);
+    println!("{}", total);
+    // drop(root);
+    // mem_print();
 }
 
 fn build_tree(reader: BufReader<File>) -> Rc<RefCell<Node>> {
@@ -63,6 +99,26 @@ fn build_tree(reader: BufReader<File>) -> Rc<RefCell<Node>> {
     for line in reader.lines() {
         let line = line.expect("read line failed");
 
+        if line == "$ ls" {
+            continue;
+        }
+
+        if line == "$ cd /" {
+            cwd = Rc::clone(&root);
+            continue;
+        }
+
+        if line == "$ cd .." {
+            let parent = cwd.borrow().parent();
+            if let Some(parent) = parent {
+                // Rc точно существует, так как родительский элемент в дереве владеет дочерним
+                cwd = parent.upgrade().unwrap();
+                continue;
+            }
+
+            panic!("can't move to parent of current directory");
+        }
+
         if let Some(caps) = RE_CD.captures(&line) {
             let name = &caps[1];
 
@@ -72,11 +128,10 @@ fn build_tree(reader: BufReader<File>) -> Rc<RefCell<Node>> {
                 continue;
             }
 
-            let cwd_clone = Rc::clone(&cwd);
             let child = Rc::new(RefCell::new(Node::Dir(Directory{
                 size: None,
                 children: HashMap::new(),
-                parent: Some(cwd_clone)
+                parent: Some(Rc::downgrade(&cwd))
             })));
 
             let child_clone = Rc::clone(&child);
@@ -92,11 +147,10 @@ fn build_tree(reader: BufReader<File>) -> Rc<RefCell<Node>> {
                 continue;
             }
 
-            let cwd_clone = Rc::clone(&cwd);
             let child = Rc::new(RefCell::new(Node::Dir(Directory{
                 size: None,
                 children: HashMap::new(),
-                parent: Some(cwd_clone)
+                parent: Some(Rc::downgrade(&cwd))
             })));
             cwd.borrow_mut().add_child(name.to_string(), child);
             continue;
@@ -112,25 +166,6 @@ fn build_tree(reader: BufReader<File>) -> Rc<RefCell<Node>> {
 
             let child = Rc::new(RefCell::new(Node::File(*size)));
             cwd.borrow_mut().add_child(name.to_string(), child);
-            continue;
-        }
-
-        if line == "$ cd .." {
-            let parent = cwd.borrow().parent();
-            if let Some(parent) = parent {
-                cwd = parent;
-                continue;
-            }
-
-            panic!("can't move to parent of current directory");
-        }
-
-        if line == "$ ls" {
-            continue;
-        }
-
-        if line == "$ cd /" {
-            cwd = Rc::clone(&root);
             continue;
         }
 

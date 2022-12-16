@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 mod t11;
 mod t12;
 mod t21;
@@ -13,9 +16,11 @@ mod t52;
 mod t61;
 mod t62;
 mod t71;
+mod mem;
 
 use std::{fs::File, io::BufReader};
 
+use mem::mem_print;
 use t71::solve;
 
 fn main() {
