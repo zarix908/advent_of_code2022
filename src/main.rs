@@ -16,12 +16,12 @@ mod t52;
 mod t61;
 mod t62;
 mod t71;
+mod t72;
 mod mem;
 
 use std::{fs::File, io::BufReader};
 
-use mem::mem_print;
-use t71::solve;
+use t72::solve;
 
 fn main() {
     let file = File::open("./data/7.txt").expect("open input file failed");
