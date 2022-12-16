@@ -20,7 +20,7 @@ pub fn solve(mut reader: BufReader<File>) {
         }
         last_pos.insert(byte[0], r - 1);
 
-        if r - l - 1 == 4 {
+        if r - l - 1 == 14 {
             println!("{}", r);
             break;
         }
