@@ -124,7 +124,20 @@ pub fn solve(reader: BufReader<File>) {
         }
     }
 
-    println!("{}", tree.root.borrow().size().unwrap());
+    let need_free = tree.root.borrow().size().unwrap() - 40000000;
+    let mut will_free = 70000000;
+    for node in tree.into_iter().map(|p| p.1) { 
+        if node.borrow().is_file() {
+            continue;
+        }
+
+        let size = node.borrow().size().unwrap(); 
+        if size > need_free && size < will_free {
+            will_free = size;
+        }
+    }   
+
+    println!("{}", will_free);
 }
 
 fn build_tree(reader: BufReader<File>) -> Tree {
